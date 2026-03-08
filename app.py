@@ -14,7 +14,7 @@ from streamlit_oauth import OAuth2Component
 CLIENT_ID = st.secrets["client_id"]
 CLIENT_SECRET = st.secrets["client_secret"]
 
-AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/auth"
+AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 REDIRECT_URI = "https://original01meet-link-generator-humgvp4oikdy4li46kgupw.streamlit.app"
@@ -49,6 +49,10 @@ result = oauth2.authorize_button(
     redirect_uri=REDIRECT_URI,
     scope=SCOPES,
     key="google",
+    extras_params={
+        "access_type": "offline",
+        "prompt": "consent",
+    }
 )
 
 if result:
