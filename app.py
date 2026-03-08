@@ -1,14 +1,12 @@
 import streamlit as st
 import datetime
-import json
-import os
-
 from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
 from streamlit_oauth import OAuth2Component
 
 
 # -----------------------------
-# Google OAuth設定
+# OAuth設定
 # -----------------------------
 
 CLIENT_ID = st.secrets["client_id"]
@@ -19,117 +17,110 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 REDIRECT_URI = "https://original01meet-link-generator-humgvp4oikdy4li46kgupw.streamlit.app/component/streamlit_oauth.authorize_button"
 
-SCOPES = "https://www.googleapis.com/auth/calendar"
+SCOPE = "https://www.googleapis.com/auth/calendar"
 
 
-# OAuthコンポーネント
 oauth2 = OAuth2Component(
     CLIENT_ID,
     CLIENT_SECRET,
     AUTHORIZE_URL,
-    TOKEN_URL,
+    TOKEN_URL
 )
-
-
-# -----------------------------
-# UI
-# -----------------------------
 
 st.title("📅 Google Meet Link Generator")
 
-st.write("GoogleログインしてMeetリンクを生成できます")
+st.write("GoogleログインしてMeetリンクを生成")
 
 
 # -----------------------------
-# Googleログイン
+# ログイン処理
 # -----------------------------
 
-result = oauth2.authorize_button(
-    name="Googleでログイン",
-    redirect_uri=REDIRECT_URI,
-    scope=SCOPES,
-    key="google",
-    extras_params={
-        "access_type": "offline",
-        "prompt": "consent",
-    }
-)
+if "token" not in st.session_state:
 
-if result:
-
-    token = result["token"]
-
-    # Google API接続
-    service = build(
-        "calendar",
-        "v3",
-        credentials=None,
-        developerKey=None,
+    result = oauth2.authorize_button(
+        name="Googleでログイン",
+        redirect_uri=REDIRECT_URI,
+        scope=SCOPE,
+        key="google",
+        extras_params={
+            "access_type": "offline",
+            "prompt": "consent",
+        }
     )
 
-    st.session_state.token = token
+    if result:
+        st.session_state.token = result["token"]
+        st.rerun()
+
+else:
+
+    st.success("Googleログイン済み")
 
 
 # -----------------------------
-# Meet生成UI
+# Meet生成
 # -----------------------------
 
 if "token" in st.session_state:
+
+    token = st.session_state.token
+
+    creds = Credentials(
+        token["access_token"]
+    )
+
+    service = build(
+        "calendar",
+        "v3",
+        credentials=creds
+    )
 
     summary = st.text_input("ミーティング名")
 
     date = st.date_input("日付")
 
-    start_time_input = st.time_input("開始時間")
+    start_time = st.time_input("開始時間")
 
-    end_time_input = st.time_input("終了時間")
+    end_time = st.time_input("終了時間")
 
+    if st.button("Meetリンク生成"):
 
-    if st.button("Meetを生成"):
+        start = datetime.datetime.combine(date, start_time)
+        end = datetime.datetime.combine(date, end_time)
 
-        start_time = datetime.datetime.combine(date, start_time_input)
-        end_time = datetime.datetime.combine(date, end_time_input)
+        start = start.isoformat()
+        end = end.isoformat()
 
-        tz = datetime.timezone(datetime.timedelta(hours=9))
-
-        start_time = start_time.replace(tzinfo=tz)
-        end_time = end_time.replace(tzinfo=tz)
-
-        service = build("calendar", "v3")
-
-        event_body = {
+        event = {
             "summary": summary,
             "start": {
-                "dateTime": start_time.isoformat(),
+                "dateTime": start,
                 "timeZone": "Asia/Tokyo",
             },
             "end": {
-                "dateTime": end_time.isoformat(),
+                "dateTime": end,
                 "timeZone": "Asia/Tokyo",
             },
             "conferenceData": {
                 "createRequest": {
-                    "requestId": f"meet-{start_time.timestamp():.0f}",
+                    "requestId": "meet123456",
                     "conferenceSolutionKey": {"type": "hangoutsMeet"},
                 }
             },
         }
 
-        created = (
-            service.events()
-            .insert(
-                calendarId="primary",
-                body=event_body,
-                conferenceDataVersion=1,
-            )
-            .execute()
-        )
+        created_event = service.events().insert(
+            calendarId="primary",
+            body=event,
+            conferenceDataVersion=1,
+        ).execute()
 
-        meet_link = created.get("hangoutLink")
+        meet_link = created_event.get("hangoutLink")
 
         if meet_link:
 
-            st.success("Meetリンク作成完了")
+            st.success("Meetリンク生成完了")
 
             st.code(meet_link)
 
