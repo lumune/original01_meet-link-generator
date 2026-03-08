@@ -17,7 +17,7 @@ CLIENT_SECRET = st.secrets["client_secret"]
 AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 
-REDIRECT_URI = "https://original01meet-link-generator-humgvp4oikdy4li46kgupw.streamlit.app"
+REDIRECT_URI = "https://original01meet-link-generator-humgvp4oikdy4li46kgupw.streamlit.app/component/streamlit_oauth.authorize_button"
 
 SCOPES = "https://www.googleapis.com/auth/calendar"
 
