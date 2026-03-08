@@ -1,13 +1,11 @@
 import streamlit as st
-import datetime
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from streamlit_oauth import OAuth2Component
 
-
-# -----------------------------
+# -------------------------
 # OAuth設定
-# -----------------------------
+# -------------------------
 
 CLIENT_ID = st.secrets["client_id"]
 CLIENT_SECRET = st.secrets["client_secret"]
@@ -19,7 +17,6 @@ REDIRECT_URI = "https://original01meet-link-generator-humgvp4oikdy4li46kgupw.str
 
 SCOPE = "https://www.googleapis.com/auth/calendar"
 
-
 oauth2 = OAuth2Component(
     CLIENT_ID,
     CLIENT_SECRET,
@@ -27,14 +24,11 @@ oauth2 = OAuth2Component(
     TOKEN_URL
 )
 
-st.title("📅 Google Meet Link Generator")
+st.title("📅 Meetリンク作成")
 
-st.write("GoogleログインしてMeetリンクを生成")
-
-
-# -----------------------------
-# ログイン処理
-# -----------------------------
+# -------------------------
+# ログイン
+# -------------------------
 
 if "token" not in st.session_state:
 
@@ -54,21 +48,17 @@ if "token" not in st.session_state:
         st.rerun()
 
 else:
+    st.success("ログイン済み")
 
-    st.success("Googleログイン済み")
-
-
-# -----------------------------
+# -------------------------
 # Meet生成
-# -----------------------------
+# -------------------------
 
 if "token" in st.session_state:
 
     token = st.session_state.token
 
-    creds = Credentials(
-        token["access_token"]
-    )
+    creds = Credentials(token["access_token"])
 
     service = build(
         "calendar",
@@ -80,17 +70,23 @@ if "token" in st.session_state:
 
     date = st.date_input("日付")
 
-    start_time = st.time_input("開始時間")
+    # スマホ用時間選択
+    times = [
+        "09:00","09:30","10:00","10:30",
+        "11:00","11:30","12:00","12:30",
+        "13:00","13:30","14:00","14:30",
+        "15:00","15:30","16:00","16:30",
+        "17:00","17:30","18:00","18:30",
+        "19:00","19:30","20:00","20:30"
+    ]
 
-    end_time = st.time_input("終了時間")
+    start_time = st.selectbox("開始時間", times)
+    end_time = st.selectbox("終了時間", times)
 
     if st.button("Meetリンク生成"):
 
-        start = datetime.datetime.combine(date, start_time)
-        end = datetime.datetime.combine(date, end_time)
-
-        start = start.isoformat()
-        end = end.isoformat()
+        start = f"{date}T{start_time}:00+09:00"
+        end = f"{date}T{end_time}:00+09:00"
 
         event = {
             "summary": summary,
@@ -120,10 +116,10 @@ if "token" in st.session_state:
 
         if meet_link:
 
-            st.success("Meetリンク生成完了")
+            st.success("Meetリンク作成完了")
 
             st.code(meet_link)
 
         else:
 
-            st.error("Meetリンクを取得できませんでした")
+            st.error("Meetリンク取得失敗")
